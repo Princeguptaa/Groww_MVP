@@ -4,6 +4,9 @@ All fixed, human-written text for the SIP Pause Guide.
 Spec §7: the AI never writes or edits advice text.
 Everything the user sees (except the one AI-generated sentence) comes from here.
 """
+from __future__ import annotations
+
+import datetime
 
 # ---------------------------------------------------------------------------
 # Reasons (spec §5.1)
@@ -185,8 +188,29 @@ ICS_DESCRIPTION = (
     "A calm moment to look at my plan. Not investment advice."
 )
 
+
+def create_ics(check_in_date: datetime.date) -> str:
+    """Generate RFC 5545 compliant .ics calendar content."""
+    dt_str = check_in_date.strftime("%Y%m%d")
+    next_day = (check_in_date + datetime.timedelta(days=1)).strftime("%Y%m%d")
+    return (
+        "BEGIN:VCALENDAR\r\n"
+        "VERSION:2.0\r\n"
+        "PRODID:-//SIP Pause Guide//EN\r\n"
+        "CALSCALE:GREGORIAN\r\n"
+        "METHOD:PUBLISH\r\n"
+        "BEGIN:VEVENT\r\n"
+        f"SUMMARY:{ICS_TITLE}\r\n"
+        f"DESCRIPTION:{ICS_DESCRIPTION}\r\n"
+        f"DTSTART;VALUE=DATE:{dt_str}\r\n"
+        f"DTEND;VALUE=DATE:{next_day}\r\n"
+        "STATUS:CONFIRMED\r\n"
+        "END:VEVENT\r\n"
+        "END:VCALENDAR\r\n"
+    )
+
+
 # ---------------------------------------------------------------------------
 # Groww Help link
 # ---------------------------------------------------------------------------
 GROWW_HELP_LINK = "https://groww.in/help"
-

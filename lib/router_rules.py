@@ -32,13 +32,10 @@ class RuleResult:
 # Priority order: PAYMENT, CASH, RETURNS, CONFUSION, SWITCH, then UNCLEAR
 # ---------------------------------------------------------------------------
 
-# Each entry: (compiled regex pattern, display evidence string)
-# Patterns are case-insensitive and use word boundaries where helpful.
-
 def _phrases(words: list[str]) -> re.Pattern:
-    """Build a case-insensitive regex that matches any of the given phrases."""
-    escaped = [re.escape(w) for w in words]
-    return re.compile("|".join(escaped), re.IGNORECASE)
+    """Build a case-insensitive regex that matches any of the given phrases with word boundaries."""
+    patterns = [rf"\b{re.escape(w)}\b" for w in words]
+    return re.compile("|".join(patterns), re.IGNORECASE)
 
 
 # PAYMENT: Instalment or payment problem
@@ -67,7 +64,7 @@ _CASH = _phrases([
     "salary delay", "salary late",
     "expense", "expenses",
     "emergency", "medical",
-    "loan", "emi",  # lowercase only matches here after PAYMENT priority
+    "loan", "emi",
     "rent", "fees", "fee",
     "job loss", "lost my job", "no income",
     "paise nahi", "paisa nahi", "paise ki zaroorat",
@@ -161,4 +158,3 @@ def rule_route(message: str, chip: Optional[str] = None) -> RuleResult:
             return RuleResult(reason=reason, evidence=m.group(0))
 
     return RuleResult(reason="UNCLEAR", evidence="")
-
