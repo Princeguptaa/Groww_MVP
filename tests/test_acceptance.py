@@ -124,10 +124,8 @@ def test_acceptance_privacy_and_no_personal_names():
 
 
 def test_acceptance_eval_gate_control():
-    """Acceptance 7: AI routing ON only if accuracy >= 0.75 and strictly higher than baseline."""
-    # Test gate on demo results
-    results_path = Path("eval/results.json")
-    if results_path.is_file():
-        passed, msg = is_ai_gate_passed(results_path)
-        assert isinstance(passed, bool)
-        assert "AI routing is" in msg
+    """Acceptance 7: AI routing ON only if all quality criteria met; OFF when missing or demo."""
+    # When results.json is missing, gate is OFF
+    passed, msg = is_ai_gate_passed(Path("eval/results.json"))
+    assert passed is False
+    assert "AI routing is OFF" in msg

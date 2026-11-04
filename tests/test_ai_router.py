@@ -138,29 +138,87 @@ def test_ai_router_hallucinated_evidence_fails_gate2():
 
 
 def test_is_ai_gate_passed(tmp_path: Path):
-    # Missing file -> evaluation pending
+    # Missing file -> Gate is OFF
     missing_file = tmp_path / "nonexistent.json"
     passed, msg = is_ai_gate_passed(missing_file)
-    assert passed is True
-    assert "pending" in msg.lower()
+    assert passed is False
+    assert "OFF" in msg
 
     # Accuracy below 0.75 -> OFF
     low_acc_file = tmp_path / "low_acc.json"
-    low_acc_file.write_text(json.dumps({"ai_accuracy": 0.70, "baseline_accuracy": 0.60}))
+    low_acc_file.write_text(json.dumps({
+        "item_count": 30,
+        "ai_calls_ok": 30,
+        "is_demo": False,
+        "ai_accuracy": 0.70,
+        "baseline_accuracy": 0.60,
+    }))
     passed, msg = is_ai_gate_passed(low_acc_file)
     assert passed is False
     assert "OFF" in msg
 
     # Accuracy >= 0.75 but not higher than baseline -> OFF
     lower_than_base_file = tmp_path / "lower_than_base.json"
-    lower_than_base_file.write_text(json.dumps({"ai_accuracy": 0.80, "baseline_accuracy": 0.85}))
+    lower_than_base_file.write_text(json.dumps({
+        "item_count": 30,
+        "ai_calls_ok": 30,
+        "is_demo": False,
+        "ai_accuracy": 0.80,
+        "baseline_accuracy": 0.85,
+    }))
     passed, msg = is_ai_gate_passed(lower_than_base_file)
     assert passed is False
     assert "OFF" in msg
 
-    # Both conditions met (acc >= 0.75 and acc > base) -> ON
+    # item_count < 30 -> OFF
+    small_count_file = tmp_path / "small_count.json"
+    small_count_file.write_text(json.dumps({
+        "item_count": 29,
+        "ai_calls_ok": 29,
+        "is_demo": False,
+        "ai_accuracy": 0.90,
+        "baseline_accuracy": 0.60,
+    }))
+    passed, msg = is_ai_gate_passed(small_count_file)
+    assert passed is False
+    assert "OFF" in msg
+
+    # ai_calls_ok != item_count -> OFF
+    failed_call_file = tmp_path / "failed_call.json"
+    failed_call_file.write_text(json.dumps({
+        "item_count": 30,
+        "ai_calls_ok": 29,
+        "is_demo": False,
+        "ai_accuracy": 0.90,
+        "baseline_accuracy": 0.60,
+    }))
+    passed, msg = is_ai_gate_passed(failed_call_file)
+    assert passed is False
+    assert "OFF" in msg
+
+    # is_demo is True -> OFF
+    demo_file = tmp_path / "demo.json"
+    demo_file.write_text(json.dumps({
+        "item_count": 30,
+        "ai_calls_ok": 30,
+        "is_demo": True,
+        "ai_accuracy": 0.90,
+        "baseline_accuracy": 0.60,
+    }))
+    passed, msg = is_ai_gate_passed(demo_file)
+    assert passed is False
+    assert "OFF" in msg
+
+    # All criteria met -> ON
     pass_file = tmp_path / "pass.json"
-    pass_file.write_text(json.dumps({"ai_accuracy": 0.82, "baseline_accuracy": 0.71}))
+    pass_file.write_text(json.dumps({
+        "item_count": 30,
+        "ai_calls_ok": 30,
+        "is_demo": False,
+        "ai_accuracy": 0.82,
+        "baseline_accuracy": 0.71,
+    }))
     passed, msg = is_ai_gate_passed(pass_file)
     assert passed is True
     assert "ON" in msg
+

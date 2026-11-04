@@ -68,22 +68,35 @@ class AIRouterOutput:
 
 def is_ai_gate_passed(results_path: Optional[Path] = None) -> tuple[bool, str]:
     """
-    Check if AI routing passes the evaluation gate (spec §6).
+    Check if AI routing passes the evaluation gate (spec §6, frozen gate rules).
 
-    AI routing is ON only if:
+    The gate is ON only if:
       1. results.json exists and is valid
-      2. ai_accuracy >= 0.75
-      3. ai_accuracy > baseline_accuracy
+      2. is_demo is False
+      3. item_count >= 30
+      4. ai_calls_ok == item_count
+      5. ai_accuracy >= 0.75
+      6. ai_accuracy > baseline_accuracy
     """
     path = results_path or Path("eval/results.json")
     if not path.is_file():
-        return True, "Evaluation pending"
+        return False, "AI routing is OFF: no evaluation has been run yet"
 
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
+        is_demo = bool(data.get("is_demo", False))
+        item_count = int(data.get("item_count", 0))
+        ai_calls_ok = int(data.get("ai_calls_ok", 0))
         ai_acc = float(data.get("ai_accuracy", 0.0))
         base_acc = float(data.get("baseline_accuracy", 0.0))
-        passed = (ai_acc >= 0.75) and (ai_acc > base_acc)
+
+        passed = (
+            (not is_demo)
+            and (item_count >= 30)
+            and (ai_calls_ok == item_count)
+            and (ai_acc >= 0.75)
+            and (ai_acc > base_acc)
+        )
         if passed:
             return True, "AI routing is ON"
         return False, "AI routing is OFF: did not pass the quality check"

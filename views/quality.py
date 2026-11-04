@@ -3,7 +3,8 @@ Quality page — Golden-set evaluation dashboard and AI governance transparency.
 
 Spec §4.4, §6, and Batch 2 notes:
 - Shows the latest golden-set evaluation from eval/results.json
-- Number of items, AI accuracy, baseline accuracy, abstain rate, confusion table
+- If results.json is missing, is_demo is true, or item_count < 30, shows
+  "No evaluation has been run yet" and does NOT show any accuracy numbers.
 - Gate status ("AI routing is ON" or "AI routing is OFF: did not pass the quality check")
 - Mentions that the golden set is mostly real review text, not typed exit-moment messages
 - Short text on where AI is used, what a non-AI version would miss, and limits
@@ -37,28 +38,34 @@ def render() -> None:
         st.warning(f"**Gate Status:** {gate_message}")
 
     st.markdown(
-        "> **Evaluation Gate Criteria (Spec §6):** AI routing is activated only when AI accuracy "
-        "is at least **75%** AND strictly outperforms the rule-based baseline. Otherwise, "
-        "the tool safely routes all requests using the rule-based router."
+        "> **Evaluation Gate Criteria (Spec §6):** AI routing is activated only when "
+        "evaluated on at least 30 real golden set items with 100% successful AI calls, "
+        "AI accuracy of at least **75%**, and strictly outperforming the rule-based baseline. "
+        "Otherwise, the tool safely routes all requests using the rule-based router."
     )
 
     # -----------------------------------------------------------------------
-    # Results data loading
+    # Results validation (Rule 5: if missing, is_demo, or item_count < 30)
     # -----------------------------------------------------------------------
-    if not RESULTS_FILE.is_file():
-        st.info(
-            "No evaluation results found yet. Run `python eval/run_eval.py` to evaluate the golden set."
-        )
+    has_valid_eval = False
+    data = {}
+    if RESULTS_FILE.is_file():
+        try:
+            data = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
+            is_demo = bool(data.get("is_demo", False))
+            item_count = int(data.get("item_count", 0))
+            if not is_demo and item_count >= 30:
+                has_valid_eval = True
+        except Exception:
+            has_valid_eval = False
+
+    if not has_valid_eval:
+        st.divider()
+        st.info("No evaluation has been run yet.")
         _render_ai_context_section()
         return
 
-    try:
-        data = json.loads(RESULTS_FILE.read_text(encoding="utf-8"))
-    except Exception as e:
-        st.error(f"Error reading evaluation results: {e}")
-        _render_ai_context_section()
-        return
-
+    # Real evaluation metrics (shown only for real runs with item_count >= 30)
     item_count = data.get("item_count", 0)
     ai_acc = data.get("ai_accuracy", 0.0)
     base_acc = data.get("baseline_accuracy", 0.0)

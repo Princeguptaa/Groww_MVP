@@ -7,6 +7,8 @@ Runs:
 
 Outputs eval/results.json with:
 - item_count
+- ai_calls_ok
+- is_demo (false only for the real run)
 - ai_accuracy
 - baseline_accuracy
 - abstain_rate (UNCLEAR when human label was not UNCLEAR)
@@ -17,12 +19,11 @@ Outputs eval/results.json with:
 - date (ISO 8601 UTC)
 - gate_passed and gate_status
 
-Batch 2 requirements:
-- Uses its own empty session state per item
-- Uses its own large daily quota object
-- Reads GEMINI_API_KEY from os.environ (not st.secrets)
-- Waits about 4 seconds between calls
-- Stores prompt version in results.json
+Strict evaluation rules:
+1. Never falls back to any demo file. If eval/golden_set.csv is missing, stops with a clear message.
+2. Stops if GEMINI_API_KEY is not set. Stops and fails the run if AI router falls back to the rule router for any item.
+3. Records ai_calls_ok and fails if ai_calls_ok != item_count.
+4. Gate is ON only if item_count >= 30 AND ai_calls_ok == item_count AND ai_accuracy >= 0.75 AND ai_accuracy > baseline_accuracy.
 """
 from __future__ import annotations
 
@@ -54,12 +55,23 @@ def run_evaluation(
     client_factory: Optional[Callable[[str], Any]] = None,
     sleep_sec: float = 4.0,
     model: str = "gemini-3.1-flash-lite",
+    is_demo: Optional[bool] = None,
 ) -> Dict[str, Any]:
     """
     Run evaluation on the dataset and save results to output_path.
     """
     if not dataset_path.is_file():
-        raise FileNotFoundError(f"Dataset not found at {dataset_path}")
+        raise FileNotFoundError(
+            f"Dataset '{dataset_path}' is missing. Please provide the labelled golden set CSV."
+        )
+
+    # Stop if GEMINI_API_KEY is not set (and no mock client_factory provided)
+    if not api_key and client_factory is None:
+        raise ValueError("GEMINI_API_KEY environment variable is not set. Cannot run evaluation.")
+
+    # is_demo is false only for the real run
+    if is_demo is None:
+        is_demo = dataset_path.name != "golden_set.csv"
 
     # Read items
     items: List[Dict[str, str]] = []
@@ -77,6 +89,7 @@ def run_evaluation(
     ai_predictions: List[str] = []
     rule_predictions: List[str] = []
     ground_truth: List[str] = []
+    ai_calls_ok = 0
 
     print(f"Running evaluation on {len(items)} items from {dataset_path.name}...")
 
@@ -99,6 +112,17 @@ def run_evaluation(
             client_factory=client_factory,
             models=[model],
         )
+
+        # Fail run if AI router fell back to rule router
+        if not (ai_out.raw_result and ai_out.raw_result.ok):
+            fallback_reason = ai_out.raw_result.reason if ai_out.raw_result else "unknown"
+            raise RuntimeError(
+                f"Evaluation failed on item {idx} ('{text[:30]}...'): "
+                f"AI router fell back to rule router (reason: {fallback_reason}). "
+                f"ai_calls_ok={ai_calls_ok} != item_count={len(items)}."
+            )
+
+        ai_calls_ok += 1
         ai_predictions.append(ai_out.reason)
 
         print(
@@ -109,8 +133,14 @@ def run_evaluation(
         if sleep_sec > 0 and idx < len(items) and api_key and client_factory is None:
             time.sleep(sleep_sec)
 
-    # Compute metrics
+    # Fail run if ai_calls_ok does not equal item count
     total = len(items)
+    if ai_calls_ok != total:
+        raise RuntimeError(
+            f"Evaluation failed: ai_calls_ok ({ai_calls_ok}) does not equal item_count ({total})."
+        )
+
+    # Compute metrics
     ai_correct = sum(1 for p, a in zip(ai_predictions, ground_truth) if p == a)
     rule_correct = sum(1 for p, a in zip(rule_predictions, ground_truth) if p == a)
 
@@ -149,8 +179,14 @@ def run_evaluation(
             "support": sum(1 for a in ground_truth if a == r),
         }
 
-    # Gate logic: AI accuracy >= 0.75 AND AI accuracy > baseline accuracy
-    gate_passed = (ai_accuracy >= 0.75) and (ai_accuracy > baseline_accuracy)
+    # Gate logic: ON only if item_count >= 30 AND ai_calls_ok equals item_count AND ai_accuracy >= 0.75 AND ai_accuracy > baseline_accuracy AND is_demo is False
+    gate_passed = (
+        (not is_demo)
+        and (total >= 30)
+        and (ai_calls_ok == total)
+        and (ai_accuracy >= 0.75)
+        and (ai_accuracy > baseline_accuracy)
+    )
     gate_status = (
         "AI routing is ON"
         if gate_passed
@@ -159,6 +195,8 @@ def run_evaluation(
 
     results_data: Dict[str, Any] = {
         "item_count": total,
+        "ai_calls_ok": ai_calls_ok,
+        "is_demo": is_demo,
         "ai_accuracy": ai_accuracy,
         "baseline_accuracy": baseline_accuracy,
         "abstain_rate": abstain_rate,
@@ -177,6 +215,9 @@ def run_evaluation(
         json.dump(results_data, f, indent=2)
 
     print(f"\nEvaluation complete!")
+    print(f"Total Items:       {total}")
+    print(f"AI Calls OK:       {ai_calls_ok}/{total}")
+    print(f"Is Demo:           {is_demo}")
     print(f"AI Accuracy:       {ai_accuracy * 100:.1f}%")
     print(f"Baseline Accuracy: {baseline_accuracy * 100:.1f}%")
     print(f"Abstain Rate:      {abstain_rate * 100:.1f}%")
@@ -191,8 +232,8 @@ def main():
     parser.add_argument(
         "--dataset",
         type=Path,
-        default=None,
-        help="Path to golden set CSV (defaults to eval/golden_set.csv or eval/golden_set_demo.csv)",
+        default=Path("eval/golden_set.csv"),
+        help="Path to golden set CSV (defaults to eval/golden_set.csv)",
     )
     parser.add_argument(
         "--output",
@@ -206,29 +247,39 @@ def main():
         default=4.0,
         help="Wait time in seconds between API calls (default 4.0)",
     )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Explicitly mark run as demo",
+    )
     args = parser.parse_args()
 
-    # Determine dataset path
+    # Rule 1: Never fall back to demo file. If golden set CSV is missing, stop with clear message.
     dataset_path = args.dataset
-    if dataset_path is None:
-        primary = Path("eval/golden_set.csv")
-        demo = Path("eval/golden_set_demo.csv")
-        dataset_path = primary if primary.is_file() else demo
-
-    # Read API key from environment variable
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        print(
-            "Note: GEMINI_API_KEY environment variable is not set. "
-            "AI routing will fall back to rule router."
+    if not dataset_path.is_file():
+        sys.exit(
+            f"Error: Golden set file '{dataset_path}' is missing. "
+            "run_eval.py does not use any demo file. Please provide the labelled golden set CSV."
         )
 
-    run_evaluation(
-        dataset_path=dataset_path,
-        output_path=args.output,
-        api_key=api_key,
-        sleep_sec=args.wait,
-    )
+    # Rule 2: Stop if GEMINI_API_KEY is not set
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        sys.exit(
+            "Error: GEMINI_API_KEY environment variable is not set. "
+            "Please set GEMINI_API_KEY before running evaluation."
+        )
+
+    try:
+        run_evaluation(
+            dataset_path=dataset_path,
+            output_path=args.output,
+            api_key=api_key,
+            sleep_sec=args.wait,
+            is_demo=args.demo,
+        )
+    except Exception as e:
+        sys.exit(f"Evaluation failed: {e}")
 
 
 if __name__ == "__main__":
