@@ -15,6 +15,31 @@ st.set_page_config(
     layout="centered",
 )
 
+# Hard Rule 8: Minimum font 14px, colour-blind-safe styling, usable at 375px width
+st.markdown(
+    """
+    <style>
+    html, body, [class*="css"], [class*="st-"] {
+        font-size: 15px !important;
+    }
+    .stApp {
+        max-width: 100%;
+        margin: 0 auto;
+    }
+    @media (max-width: 375px) {
+        .block-container {
+            padding-left: 0.75rem !important;
+            padding-right: 0.75rem !important;
+        }
+        button {
+            min-height: 44px !important;
+        }
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 # Sidebar router (spec §4)
 page = st.sidebar.radio("Navigate", ["Guide", "Quality"], label_visibility="collapsed")
 
@@ -26,4 +51,3 @@ else:
 # Footer on every page (spec §4)
 st.divider()
 st.caption(FOOTER)
-

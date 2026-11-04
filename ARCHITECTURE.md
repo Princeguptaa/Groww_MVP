@@ -119,7 +119,7 @@ Run **in code** after the AI returns:
 
 ### 3.3 Caps (from `ai_client.py`)
 
-The existing [`ai_client.py`](file:///c:/Users/Prince Gupta/.antigravity-ide/Groww_MVP/ai_client.py) already implements these:
+The existing `lib/ai_client.py` already implements these:
 
 | Cap | Limit | Mechanism |
 |-----|-------|-----------|
