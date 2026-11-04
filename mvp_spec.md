@@ -12,8 +12,8 @@ This file is the single source of truth. If anything elsewhere disagrees with it
 A small web tool that sits at the moment a first-time SIP investor thinks about pausing or stopping. It is a prototype of a feature that could live inside Groww. It is NOT connected to any real account.
 - The user says, in their own words (English or Hinglish), what is going on.
 - AI works out the main reason and shows it back, quoting the user's own words.
-- The tool then shows the lighter options (skip, reduce, pause) next to "stop", with plain consequences and the steps on Groww. The reason decides what explanation comes first. All four options are always visible.
-- If the user picks Skip or Pause, they can add an optional check-in date to their own calendar, so a break does not quietly turn into a stop.
+- The tool then shows the lighter options (skip, reduce, a longer break) next to "stop", with plain consequences and the steps on Groww. The reason decides what explanation comes first. All four options are always visible.
+- If the user picks Skip or Take a longer break, they can add an optional check-in date to their own calendar, so a break does not quietly turn into a stop.
 - The user decides. Nothing is blocked, nothing is automatic.
 
 Why: research shows the stop moment is mostly about cash being tight or value looking low, not about payment failures. Users leave the app for YouTube, Google and friends. Groww already has skip and edit, so the gap is finding, understanding and trusting a lighter option at that moment.
@@ -47,10 +47,10 @@ Use one sidebar router with two items: "Guide" and "Quality". Footer on both: "P
 
 ### 4.3 Guide, step 3: Your options
 - Reason block first (fixed text for that reason, section 7).
-- Then four option cards in this fixed order, always all four: "Skip this month", "Reduce the amount for a while", "Pause for a few months", "Stop the SIP". Each card: one plain line on what it does, one line on what stays the same, and "How to do it on Groww" steps plus an official link (section 7).
+- Then four option cards in this fixed order, always all four: "Skip this month", "Reduce the amount for a while", "Take a longer break", "Stop the SIP". Each card: one plain line on what it does, one line on what stays the same, and "How to do it on Groww" steps plus an official link (section 7).
 - If the user gave an amount, show simple arithmetic for the Reduce card only: "If you reduce from {A} to {B} for {N} months, you still put in {B x N} rupees." (B and N are chosen by the user with two number inputs.) No predictions, no returns.
 - Below the cards: "Choose what to do" radio and a button "Show my steps". This shows only the steps and link for the chosen option. Nothing is submitted anywhere.
-- If the chosen option is Skip or Pause, also show an optional date picker "Pick a day to check in on your plan" (default: 2 months from today, user can change or ignore) and a button "Download calendar reminder". It creates a standard `.ics` file with the title "Check my SIP plan" and the description "A calm moment to look at my plan. Not investment advice." No alarm text, no urgency wording, nothing is sent to us or stored.
+- If the chosen option is Skip or Take a longer break, also show an optional date picker "Pick a day to check in on your plan" (default: 2 months from today, user can change or ignore) and a button "Download calendar reminder". It creates a standard `.ics` file with the title "Check my SIP plan" and the description "A calm moment to look at my plan. Not investment advice." No alarm text, no urgency wording, nothing is sent to us or stored.
 - Footer links: Groww Help (official).
 
 ### 4.4 Quality page
@@ -95,9 +95,10 @@ Input: the message (max 400 characters). Output: JSON only with keys `reason` (o
 
 ## 7. Fixed content (use exactly; the researcher will review wording before launch)
 Sources (official Groww pages, show as "Groww Help"): 
-- Skip or pause an instalment: https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month
+- Skip an instalment: https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month
 - Edit a SIP: https://groww.in/blog/how-to-edit-sip-on-groww
 - Why an instalment fails, keep balance, one-time payment: https://groww.in/help/mutual-funds/order/why-did-my-installment-fail--25
+- Cancel a SIP: https://groww.in/help/mutual-funds/mf-sip/how-to-cancel-my-sip
 - Start a SIP and first-instalment gap: https://groww.in/help/mutual-funds/mf-sip/how-to-start-a-sip-on-groww
 
 Reason blocks (shown first in step 3):
@@ -108,12 +109,16 @@ Reason blocks (shown first in step 3):
 - PAYMENT: "Instalments can fail when the bank balance is low or the autopay is not approved. Groww Help advises keeping enough balance a few days before the SIP date and lets you pay a missed instalment once. If several instalments fail in a row, the fund house may cancel the SIP."
 - UNCLEAR: "No problem. Here are all your options. You can also tap one of the reasons above to see more."
 
-Option cards (fixed text):
-- Skip this month: "Skip one instalment. Your SIP stays active and the next one runs as planned. Your units stay invested."
-- Reduce the amount for a while: "Lower the monthly amount for some months, then raise it again if you wish. Your SIP stays active."
-- Pause for a few months: "Skip instalments for a few months. You will need to set it back up on your side when you are ready."
+Option cards (fixed text). Steps below were checked against the official Groww Help pages on 1 Nov 2026. Use them exactly. Do not add steps.
+- Skip this month: "Skip one instalment. Groww says that once an instalment is skipped, your investments continue as is. Your units stay invested."
+  Steps: 1. Open My SIPs and select the SIP. 2. Tap Edit SIP. 3. Choose Skip Installment and confirm the month. Link: the skip page.
+- Reduce the amount for a while: "Lower the monthly amount, then raise it again if you wish. Your SIP stays active."
+  Steps: 1. Open My SIPs and select the SIP. 2. Tap Edit SIP, then Edit Amount & Date. 3. Change the amount and tap Save Changes. Link: the edit page.
+- Take a longer break: "Groww lets you skip an instalment when you wish. For a longer break you can skip as each month comes, or stop the SIP and start a new one later."
+  Steps: none. Show only: "See the Groww Help page for the exact options." and the skip page link. Do not claim a multi-month pause feature. Groww Help describes skipping one instalment at a time.
 - Stop the SIP: "Stop future instalments. Units you already hold stay in your account. You can start a new SIP any time."
-Each card also has "How to do it on Groww" (3 short steps taken from the linked Help page) and the link. If a step cannot be confirmed from the Help page, show only the link and "See the Groww Help page for the exact steps."
+  Steps: 1. In Mutual Funds, open the SIPs tab. 2. Choose the SIP. 3. Tap Cancel SIP in the top right. Link: the cancel page.
+Each card shows its steps and one official link. Never show a step that is not in this list.
 Check-in reminder text is fixed as written in section 4.3.
 Note for the builder: do not write any other advice text. Do not invent steps, dates, charges, timings or limits.
 

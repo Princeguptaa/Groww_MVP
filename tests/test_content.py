@@ -47,7 +47,26 @@ def test_all_six_reasons_defined():
 
 def test_four_option_cards_fixed_order():
     keys = [card["key"] for card in OPTION_CARDS]
-    assert keys == ["skip", "reduce", "pause", "stop"]
+    assert keys == ["skip", "reduce", "break", "stop"]
+
+    titles = [card["title"] for card in OPTION_CARDS]
+    assert titles == [
+        "Skip this month",
+        "Reduce the amount for a while",
+        "Take a longer break",
+        "Stop the SIP",
+    ]
+
+    # Verify official links (spec §7)
+    assert OPTION_CARDS[0]["link"] == "https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month"
+    assert OPTION_CARDS[1]["link"] == "https://groww.in/blog/how-to-edit-sip-on-groww"
+    assert OPTION_CARDS[2]["link"] == "https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month"
+    assert OPTION_CARDS[3]["link"] == "https://groww.in/help/mutual-funds/mf-sip/how-to-cancel-my-sip"
+
+    # The third card is "Take a longer break" with no steps (link only, spec §7)
+    break_card = OPTION_CARDS[2]
+    assert len(break_card["steps"]) == 0
+    assert "See the Groww Help page for the exact options." in break_card["note"]
 
 
 def test_stop_card_same_size_class_and_structure():
@@ -82,3 +101,4 @@ def test_no_banned_urgency_words_in_content_and_views():
 def test_disclaimers_and_footer():
     assert FOOTER == "Prototype for research. Not investment advice."
     assert PRIVACY_NOTICE == "Do not enter personal or account details."
+

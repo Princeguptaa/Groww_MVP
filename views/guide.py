@@ -25,6 +25,7 @@ from lib.content import (
     create_ics,
 )
 from lib.guards import pre_check
+from lib.router_ai import is_ai_gate_passed, route_ai
 from lib.router_rules import rule_route
 
 
@@ -119,11 +120,24 @@ def render() -> None:
         return
 
     # -----------------------------------------------------------------------
-    # Routing (Phase 1: rule router only)
+    # Routing (Phase 3: AI router with evaluation gate check & rule fallback)
     # -----------------------------------------------------------------------
-    routing_result = rule_route(active_message, chip=active_chip)
-    detected_reason = routing_result.reason
-    detected_evidence = routing_result.evidence
+    ai_on, _ = is_ai_gate_passed()
+    if ai_on:
+        ai_out = route_ai(
+            active_message,
+            st.session_state,
+            getattr(st, "secrets", {}),
+            chip=active_chip,
+        )
+        detected_reason = ai_out.reason
+        detected_evidence = ai_out.evidence
+        if ai_out.banner:
+            st.info(ai_out.banner)
+    else:
+        routing_result = rule_route(active_message, chip=active_chip)
+        detected_reason = routing_result.reason
+        detected_evidence = routing_result.evidence
 
     # -----------------------------------------------------------------------
     # Step 2: What we understood (spec §4.2, Note 2)
@@ -180,9 +194,12 @@ def _render_option_cards(active_reason: str, user_amount: int) -> None:
         with st.container(border=True):
             st.markdown(f"### {card['title']}")
             st.markdown(f"**What it does & what stays the same:** {card['what']}")
-            st.markdown("**How to do it on Groww:**")
-            for step in card["steps"]:
-                st.markdown(f"- {step}")
+            if card["steps"]:
+                st.markdown("**How to do it on Groww:**")
+                for step in card["steps"]:
+                    st.markdown(f"- {step}")
+            else:
+                st.markdown("See the Groww Help page for the exact options.")
             st.markdown(f"[See Groww Help page]({card['link']})")
 
             # Arithmetic for Reduce card if amount given (spec §4.3)
@@ -235,12 +252,15 @@ def _render_action_section() -> None:
         with st.container(border=True):
             st.markdown(f"### Steps for: {chosen_card['title']}")
             st.markdown(f"**Summary:** {chosen_card['what']}")
-            st.markdown("**Groww Steps:**")
-            for idx, step in enumerate(chosen_card["steps"], 1):
-                st.markdown(f"{idx}. {step}")
+            if chosen_card["steps"]:
+                st.markdown("**Groww Steps:**")
+                for idx, step in enumerate(chosen_card["steps"], 1):
+                    st.markdown(f"{idx}. {step}")
+            else:
+                st.markdown("See the Groww Help page for the exact options.")
             st.markdown(f"[Official Groww Help Page]({chosen_card['link']})")
 
-            # Check-in calendar for Skip or Pause (spec §4.3)
+            # Check-in calendar for Skip or Take a longer break (spec §4.3)
             if chosen_card["has_calendar"]:
                 st.markdown("---")
                 st.markdown("#### Optional check-in reminder")

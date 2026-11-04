@@ -79,10 +79,11 @@ _CASH = _phrases([
 
 # RETURNS: Returns or value look low or worrying
 _RETURNS = _phrases([
+    "crash", "falling", "scared", "panic",
     "value is below", "value below",
     "returns are low", "returns low", "low returns",
     "loss", "losses", "negative",
-    "going down", "went down", "falling",
+    "going down", "went down",
     "not growing", "no growth",
     "underperforming", "poor performance",
     "market crash", "market down", "market fall",

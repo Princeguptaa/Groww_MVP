@@ -53,12 +53,15 @@ def test_all_four_cards_always_rendered():
     expected_titles = [
         "Skip this month",
         "Reduce the amount for a while",
-        "Pause for a few months",
+        "Take a longer break",
         "Stop the SIP",
     ]
     for card, expected_title in zip(cards, expected_titles):
         assert card["title"] == expected_title
-        assert len(card["steps"]) == 3
+        if card["key"] == "break":
+            assert len(card["steps"]) == 0
+        else:
+            assert len(card["steps"]) == 3
         assert card["link"].startswith("https://groww.in")
 
 
@@ -71,14 +74,14 @@ def test_reduce_arithmetic_calculation():
     assert calc_str == "If you reduce from 5000 to 2000 for 4 months, you still put in 8000 rupees."
 
 
-def test_skip_and_pause_have_calendar_reminder():
+def test_skip_and_longer_break_have_calendar_reminder():
     skip_card = next(c for c in OPTION_CARDS if c["key"] == "skip")
-    pause_card = next(c for c in OPTION_CARDS if c["key"] == "pause")
+    break_card = next(c for c in OPTION_CARDS if c["key"] == "break")
     reduce_card = next(c for c in OPTION_CARDS if c["key"] == "reduce")
     stop_card = next(c for c in OPTION_CARDS if c["key"] == "stop")
 
     assert skip_card["has_calendar"] is True
-    assert pause_card["has_calendar"] is True
+    assert break_card["has_calendar"] is True
     assert reduce_card["has_calendar"] is False
     assert stop_card["has_calendar"] is False
 
@@ -99,3 +102,4 @@ def test_reason_override_updates_block():
 
     assert block_before != block_after
     assert "market-linked fund" in block_after
+

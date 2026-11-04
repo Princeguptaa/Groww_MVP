@@ -2,10 +2,30 @@
 AI router for the SIP Pause Guide.
 
 Spec §5.2: fixed prompt, JSON output with reason/evidence/language.
-This module defines the prompt. The actual API call goes through ai_client.py.
-Wired in Phase 3.
+Spec §5.3: post-AI gates.
+Spec §6: evaluation gate check for AI routing.
 """
 from __future__ import annotations
+
+import json
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Callable, Dict, Optional
+
+from lib.ai_client import (
+    API_ERROR,
+    BAD_JSON,
+    DAILY_CAP,
+    NO_KEY,
+    SESSION_CAP,
+    AIResult,
+    DailyQuota,
+    call_json,
+)
+from lib.guards import post_gates
+from lib.router_rules import rule_route
+
+PROMPT_VERSION = "v1"
 
 ROUTER_PROMPT = """You are a classifier for a SIP (Systematic Investment Plan) pause/stop tool.
 
@@ -35,3 +55,108 @@ Return ONLY valid JSON with exactly these three keys:
 
 No other text, no explanation, no markdown."""
 
+
+@dataclass
+class AIRouterOutput:
+    reason: str
+    evidence: str
+    language: str = "English"
+    banner: str = ""
+    model: Optional[str] = None
+    raw_result: Optional[AIResult] = None
+
+
+def is_ai_gate_passed(results_path: Optional[Path] = None) -> tuple[bool, str]:
+    """
+    Check if AI routing passes the evaluation gate (spec §6).
+
+    AI routing is ON only if:
+      1. results.json exists and is valid
+      2. ai_accuracy >= 0.75
+      3. ai_accuracy > baseline_accuracy
+    """
+    path = results_path or Path("eval/results.json")
+    if not path.is_file():
+        return True, "Evaluation pending"
+
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        ai_acc = float(data.get("ai_accuracy", 0.0))
+        base_acc = float(data.get("baseline_accuracy", 0.0))
+        passed = (ai_acc >= 0.75) and (ai_acc > base_acc)
+        if passed:
+            return True, "AI routing is ON"
+        return False, "AI routing is OFF: did not pass the quality check"
+    except Exception:
+        return False, "AI routing is OFF: did not pass the quality check"
+
+
+def route_ai(
+    message: str,
+    state: Any,
+    secrets: Any,
+    chip: Optional[str] = None,
+    *,
+    quota: Optional[DailyQuota] = None,
+    client_factory: Optional[Callable[[str], Any]] = None,
+    models: Optional[list] = None,
+) -> AIRouterOutput:
+    """
+    Route a message using the Gemini AI client with fallback rules and gates.
+
+    - BAD_JSON: shows UNCLEAR (all options).
+    - NO_KEY, SESSION_CAP, DAILY_CAP, API_ERROR: fall back to rule router with banner.
+    - OK: pass through post_gates (Gate 1, 2, 3, 5, 7).
+    """
+    result = call_json(
+        ROUTER_PROMPT,
+        message,
+        state,
+        secrets,
+        quota=quota,
+        client_factory=client_factory,
+        models=models,
+    )
+
+    if result.reason == BAD_JSON:
+        return AIRouterOutput(
+            reason="UNCLEAR",
+            evidence="",
+            language="English",
+            banner=result.banner,
+            model=result.model,
+            raw_result=result,
+        )
+
+    if not result.ok:
+        # Fall back to rule router
+        fallback_res = rule_route(message, chip=chip)
+        return AIRouterOutput(
+            reason=fallback_res.reason,
+            evidence=fallback_res.evidence,
+            language="English",
+            banner=result.banner,
+            model=result.model,
+            raw_result=result,
+        )
+
+    # result.ok is True: run post gates
+    gated_reason, gated_evidence = post_gates(
+        result.data,
+        message,
+        chip_used=bool(chip),
+    )
+    lang = (
+        result.data.get("language", "English")
+        if isinstance(result.data, dict)
+        else "English"
+    )
+
+    return AIRouterOutput(
+        reason=gated_reason,
+        evidence=gated_evidence,
+        language=lang,
+        banner="",
+        model=result.model,
+        raw_result=result,
+    )

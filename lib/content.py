@@ -80,13 +80,13 @@ OPTION_CARDS = [
         "key": "skip",
         "title": "Skip this month",
         "what": (
-            "Skip one instalment. Your SIP stays active and the next one "
-            "runs as planned. Your units stay invested."
+            "Skip one instalment. Groww says that once an instalment is skipped, "
+            "your investments continue as is. Your units stay invested."
         ),
         "steps": [
-            "Open the SIP in your Groww account.",
-            "Tap \u2018Skip\u2019 or \u2018Pause\u2019 for the next instalment.",
-            "Confirm. The SIP stays active for the month after.",
+            "Open My SIPs and select the SIP.",
+            "Tap Edit SIP.",
+            "Choose Skip Installment and confirm the month.",
         ],
         "link": "https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month",
         "has_calendar": True,
@@ -95,29 +95,26 @@ OPTION_CARDS = [
         "key": "reduce",
         "title": "Reduce the amount for a while",
         "what": (
-            "Lower the monthly amount for some months, then raise it again "
-            "if you wish. Your SIP stays active."
+            "Lower the monthly amount, then raise it again if you wish. "
+            "Your SIP stays active."
         ),
         "steps": [
-            "Open the SIP in your Groww account.",
-            "Tap \u2018Edit SIP\u2019 and lower the amount.",
-            "Confirm. You can raise it again any time.",
+            "Open My SIPs and select the SIP.",
+            "Tap Edit SIP, then Edit Amount & Date.",
+            "Change the amount and tap Save Changes.",
         ],
         "link": "https://groww.in/blog/how-to-edit-sip-on-groww",
         "has_calendar": False,
     },
     {
-        "key": "pause",
-        "title": "Pause for a few months",
+        "key": "break",
+        "title": "Take a longer break",
         "what": (
-            "Skip instalments for a few months. You will need to set it back "
-            "up on your side when you are ready."
+            "Groww lets you skip an instalment when you wish. For a longer break "
+            "you can skip as each month comes, or stop the SIP and start a new one later."
         ),
-        "steps": [
-            "Open the SIP in your Groww account.",
-            "Tap \u2018Pause\u2019 and choose how many months.",
-            "Confirm. Set a reminder to check back.",
-        ],
+        "steps": [],
+        "note": "See the Groww Help page for the exact options.",
         "link": "https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month",
         "has_calendar": True,
     },
@@ -129,11 +126,11 @@ OPTION_CARDS = [
             "account. You can start a new SIP any time."
         ),
         "steps": [
-            "Open the SIP in your Groww account.",
-            "Tap \u2018Cancel SIP\u2019.",
-            "Confirm. Your existing units remain invested.",
+            "In Mutual Funds, open the SIPs tab.",
+            "Choose the SIP.",
+            "Tap Cancel SIP in the top right.",
         ],
-        "link": "https://groww.in/help/mutual-funds/order/can-i-pause-sip-for-next-month",
+        "link": "https://groww.in/help/mutual-funds/mf-sip/how-to-cancel-my-sip",
         "has_calendar": False,
     },
 ]

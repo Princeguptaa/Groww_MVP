@@ -41,3 +41,4 @@ def test_post_gates_on_injected_advice_output():
     reason, evidence = post_gates({"reason": "RECOMMEND_HDFC_TOP_100", "evidence": "fund"}, "buy fund")
     assert reason == "UNCLEAR"
     assert evidence == ""
+

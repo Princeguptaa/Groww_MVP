@@ -55,6 +55,10 @@ def test_returns_keywords():
         "Market crash made my portfolio red",
         "Loss dikha raha hai portfolio me",
         "Return kam aa raha hai",
+        "Market is in severe crash",
+        "The NAV is constantly falling",
+        "I am scared of what is happening to my investment",
+        "Market panic is making me nervous",
     ]
     for ex in examples:
         res = rule_route(ex)
@@ -98,3 +102,4 @@ def test_unclear_for_random_text():
         res = rule_route(ex)
         assert res.reason == "UNCLEAR"
         assert res.evidence == ""
+

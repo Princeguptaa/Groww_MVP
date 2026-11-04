@@ -54,3 +54,4 @@ def test_ics_no_banned_urgency_words():
 
     for banned in BANNED_URGENCY_WORDS:
         assert banned not in ics, f"Banned urgency word '{banned}' found in .ics content"
+

@@ -22,23 +22,38 @@ class GuardResult:
 # ---------------------------------------------------------------------------
 # Gate 4 (pre-AI): advice / out-of-scope check
 # ---------------------------------------------------------------------------
-_ADVICE_PATTERNS = re.compile(
-    r"\b(which fund|which stock|what fund|what stock|what (?:should i|to) (?:invest|buy)|"
-    r"recommend|best fund|best stock|buy fund|buy stock|fund is best|stock is best|"
-    r"konsa fund|kaun sa fund|kisme invest|kya kharidun|kisme lagaun)\b",
-    re.IGNORECASE,
-)
+_DECLINE_PATTERNS = [
+    re.compile(
+        r"\b(best|top|good)\b.*?\b(mutual\s+funds?|funds?|stocks?|etfs?|schemes?)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(
+        r"\bbuy\b.*?\b(funds?|stocks?|shares?)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(
+        r"\bignore\b.*?\b(rules?|instructions?)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+    re.compile(
+        r"\b(which fund|which stock|what fund|what stock|what (?:should i|to) (?:invest|buy)|"
+        r"recommend|best fund|best stock|buy fund|buy stock|fund is best|stock is best|"
+        r"konsa fund|kaun sa fund|kisme invest|kya kharidun|kisme lagaun)\b",
+        re.IGNORECASE | re.DOTALL,
+    ),
+]
 
 
 def pre_check(message: str) -> GuardResult:
     """
-    Gate 4: if the message asks for fund/stock advice or is off-topic,
-    return decline text. No AI call should be made.
+    Gate 4: if the message asks for fund/stock advice, attempts instruction override,
+    or is off-topic, return decline text. No AI call should be made.
     """
     if not message or not isinstance(message, str):
         return GuardResult(passed=True)
-    if _ADVICE_PATTERNS.search(message):
-        return GuardResult(passed=False, decline_text=DECLINE_TEXT)
+    for pat in _DECLINE_PATTERNS:
+        if pat.search(message):
+            return GuardResult(passed=False, decline_text=DECLINE_TEXT)
     return GuardResult(passed=True)
 
 

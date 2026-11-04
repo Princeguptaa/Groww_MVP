@@ -61,3 +61,4 @@ def test_no_personal_names_in_app_text():
         text = f.read_text(encoding="utf-8").lower()
         for name in banned_names:
             assert name not in text, f"Personal name '{name}' found in {f.name}"
+
