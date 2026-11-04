@@ -1,0 +1,4 @@
+id,source_id,text,human_reason
+1,demo_01,"Money is tight this month due to an unexpected expense",CASH
+2,demo_02,"The NAV is falling and market crash is scary",RETURNS
+3,demo_03,"My instalment failed and autopay was not deducted",PAYMENT
