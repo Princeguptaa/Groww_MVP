@@ -35,6 +35,26 @@ st.markdown(
             min-height: 44px !important;
         }
     }
+    button {
+        cursor: pointer !important;
+        transition: all 0.15s ease-in-out !important;
+    }
+    button[kind="secondary"], button[data-testid="stBaseButton-secondary"] {
+        border-radius: 8px !important;
+        border: 1px solid #D0D5DD !important;
+        background-color: #FFFFFF !important;
+        color: #344054 !important;
+        font-weight: 500 !important;
+    }
+    button[kind="secondary"]:hover, button[data-testid="stBaseButton-secondary"]:hover {
+        border-color: #00D09C !important;
+        color: #008765 !important;
+        background-color: #F4FBF8 !important;
+    }
+    button[kind="secondary"]:active, button[data-testid="stBaseButton-secondary"]:active {
+        background-color: #E6F7F2 !important;
+        border-color: #00D09C !important;
+    }
     button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textarea:focus-visible {
         outline: 2px solid #00D09C !important;
         outline-offset: 2px !important;

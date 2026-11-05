@@ -45,6 +45,13 @@ def render() -> None:
 # ---------------------------------------------------------------------------
 # Screen A: What is going on? (spec §4.1)
 # ---------------------------------------------------------------------------
+def _select_chip(chip_text: str) -> None:
+    """Callback when a reason chip is tapped to fill the text box."""
+    st.session_state["guide_text_area"] = chip_text
+    st.session_state["message"] = chip_text
+    st.session_state["selected_chip"] = chip_text
+
+
 def _render_screen_a() -> None:
     """Render Screen A: text box, six tap chips, single primary Continue button."""
     # Context strip (spec §4.1)
@@ -52,6 +59,7 @@ def _render_screen_a() -> None:
     st.caption(CONTEXT_CAPTION)
 
     st.title("Thinking about pausing or stopping your SIP?")
+    st.subheader("1. Tell us what is going on")
 
     # Tap chips that fill the box and skip typing (spec §4.1)
     st.write("Tap a reason to fill the box:")
@@ -59,25 +67,31 @@ def _render_screen_a() -> None:
         c1, c2 = st.columns(2)
         with c1:
             chip_0 = CHIPS[i]
-            if st.button(chip_0, key=f"chip_btn_{i}", use_container_width=True):
-                st.session_state["guide_text_area"] = chip_0
-                st.session_state["message"] = chip_0
-                st.session_state["selected_chip"] = chip_0
-                st.rerun()
+            st.button(
+                chip_0,
+                key=f"chip_btn_{i}",
+                use_container_width=True,
+                on_click=_select_chip,
+                args=(chip_0,),
+            )
         with c2:
             if i + 1 < len(CHIPS):
                 chip_1 = CHIPS[i + 1]
-                if st.button(chip_1, key=f"chip_btn_{i+1}", use_container_width=True):
-                    st.session_state["guide_text_area"] = chip_1
-                    st.session_state["message"] = chip_1
-                    st.session_state["selected_chip"] = chip_1
-                    st.rerun()
+                st.button(
+                    chip_1,
+                    key=f"chip_btn_{i+1}",
+                    use_container_width=True,
+                    on_click=_select_chip,
+                    args=(chip_1,),
+                )
+
+    # Initialize text area key if not present (avoids Session State API conflicts)
+    if "guide_text_area" not in st.session_state:
+        st.session_state["guide_text_area"] = ""
 
     # Text box (max 400 characters, spec §4.1)
-    current_text = st.session_state.get("guide_text_area", "")
     message = st.text_area(
         "What is going on? Write in your own words (English or Hinglish).",
-        value=current_text,
         max_chars=400,
         height=120,
         key="guide_text_area",

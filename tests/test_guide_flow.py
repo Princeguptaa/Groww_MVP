@@ -169,3 +169,26 @@ def test_reason_override_updates_block():
     assert block_before != block_after
     assert "market-linked fund" in block_after
 
+
+def test_screen_a_chip_click_fills_text_area():
+    """Verify tapping any chip on Screen A populates the text area."""
+    from streamlit.testing.v1 import AppTest
+
+    app_path = Path(__file__).resolve().parent.parent / "app.py"
+    at = AppTest.from_file(str(app_path))
+    at.run()
+    assert not at.exception
+
+    # Initially empty text area
+    assert at.text_area[0].value == ""
+
+    # Click first chip
+    at.button[0].click().run()
+    assert not at.exception
+    assert at.text_area[0].value == CHIPS[0]
+
+    # Click second chip
+    at.button[1].click().run()
+    assert not at.exception
+    assert at.text_area[0].value == CHIPS[1]
+
