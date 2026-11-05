@@ -35,6 +35,10 @@ st.markdown(
             min-height: 44px !important;
         }
     }
+    button:focus-visible, [role="button"]:focus-visible, input:focus-visible, textarea:focus-visible {
+        outline: 2px solid #00D09C !important;
+        outline-offset: 2px !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,

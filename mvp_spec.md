@@ -33,25 +33,28 @@ Business outcome we want to improve: % of first-time MF investors with an active
 ## 4. Screens (one page "Guide" plus a "Quality" page)
 Use one sidebar router with two items: "Guide" and "Quality". Footer on both: "Prototype for research. Not investment advice."
 
-### 4.1 Guide, step 1: Tell us what is going on
+### 4.1 Screen A: What is going on?
+- A small context strip at the top: "Groww > My SIPs > Example SIP" and one caption: "Prototype of a feature inside Groww. It is not connected to any account."
 - Title: "Thinking about pausing or stopping your SIP?"
 - Text box, max 400 characters: "What is going on? Write in your own words (English or Hinglish)."
-- Optional numbers: monthly SIP amount (rupees), months since you started.
-- Six tap chips that fill the box and skip typing: "Money is tight this month", "My value is below what I invested", "I don't understand where my money or instalment is", "I want to use this money elsewhere", "An instalment failed or looks wrong", "I'm just not sure".
+- Six tap chips that fill the box: "Money is tight this month", "My value is below what I invested", "I don't understand where my money or instalment is", "I want to use this money elsewhere", "An instalment failed or looks wrong", "I'm just not sure".
 - Button: "Continue".
+- One small caption under the button: "Your message is sent to an AI service (Google Gemini) to work out the reason. This tool does not store it. Please do not enter personal or account details."
+- No other fields on this screen (the amount and months inputs move to Screen C).
 
-### 4.2 Guide, step 2: What we understood
-- Show one sentence made by the AI: "It sounds like {reason in plain words}. You wrote: '{evidence phrase}'."
-- Show a small badge. "Checked: quoted from your message" when the evidence phrase is found in the message, or "Not sure, so we show every option" when the reason is Unclear.
-- A selector "Not right? Choose another reason" with the six reasons. If the user changes it, use their choice.
+### 4.2 Screen B: What we heard, and your options
+- A "We heard" card with the code-built sentence "It sounds like {reason in plain words}. You wrote: '{evidence phrase}'." and a small badge: "Checked: quoted from your message" or "Not sure, so we show every option".
+- Inside an expander "Not right? Choose another reason": a selector with the six reasons. If the user changes it, use their choice.
+- The reason block (fixed text for that reason, section 7, maximum 45 words).
+- Heading "Your options. Tap one to see how."
+- Four equal tiles in a 2 x 2 grid (stacked on a phone), in this fixed order: "Skip this month", "Reduce the amount for a while", "Take a longer break", "Stop the SIP". Each tile shows only its title and one summary line (section 7). No steps and no links on this screen. The Stop tile has exactly the same size and style as the others.
+- A "Start over" button.
 
-### 4.3 Guide, step 3: Your options
-- Reason block first (fixed text for that reason, section 7).
-- Then four option cards in this fixed order, always all four: "Skip this month", "Reduce the amount for a while", "Take a longer break", "Stop the SIP". Each card: one plain line on what it does, one line on what stays the same, and "How to do it on Groww" steps plus an official link (section 7).
-- If the user gave an amount, show simple arithmetic for the Reduce card only: "If you reduce from {A} to {B} for {N} months, you still put in {B x N} rupees." (B and N are chosen by the user with two number inputs.) No predictions, no returns.
-- Below the cards: "Choose what to do" radio and a button "Show my steps". This shows only the steps and link for the chosen option. Nothing is submitted anywhere.
-- If the chosen option is Skip or Take a longer break, also show an optional date picker "Pick a day to check in on your plan" (default: 2 months from today, user can change or ignore) and a button "Download calendar reminder". It creates a standard `.ics` file with the title "Check my SIP plan" and the description "A calm moment to look at my plan. Not investment advice." No alarm text, no urgency wording, nothing is sent to us or stored.
-- Footer links: Groww Help (official).
+### 4.3 Screen C: One option in detail
+- Shows only the tapped option: its title, "What it does" (the card text in section 7), "How to do it on Groww" (the fixed steps, or the fixed no-steps text), and one official link.
+- Reduce only: three number inputs (current monthly amount, new monthly amount, number of months) and the line "If you reduce from {A} to {B} for {N} months, you still put in {B x N} rupees." No predictions, no returns.
+- Skip and Take a longer break only: an optional date picker "Pick a day to check in on your plan" (default 2 months from today) and a button "Download calendar reminder". It creates a standard `.ics` file with the title "Check my SIP plan" and the description "A calm moment to look at my plan. Not investment advice." No alarm text, no urgency wording, nothing is stored.
+- Buttons: "Back to options" and "Start over". Nothing is submitted anywhere.
 
 ### 4.4 Quality page
 - Shows the latest golden-set evaluation from `eval/results.json` (section 6): number of items, AI accuracy, rule-based baseline accuracy, abstain rate, confusion table, and the gate status ("AI routing is ON" or "AI routing is OFF: did not pass the quality check").
@@ -108,6 +111,8 @@ Reason blocks (shown first in step 3):
 - SWITCH: "Stopping future instalments does not sell units you already hold. Moving money to another investment is your decision. This tool cannot compare investments or recommend any."
 - PAYMENT: "Instalments can fail when the bank balance is low or the autopay is not approved. Groww Help advises keeping enough balance a few days before the SIP date and lets you pay a missed instalment once. If several instalments fail in a row, the fund house may cancel the SIP."
 - UNCLEAR: "No problem. Here are all your options. You can also tap one of the reasons above to see more."
+
+Tile summary lines (Screen B, one line each): Skip this month: "Skip one instalment. Your SIP stays active." Reduce the amount for a while: "Lower the amount for a while. Your SIP stays active." Take a longer break: "Skip as each month comes, or stop and start again later." Stop the SIP: "Stop future instalments. Your units stay."
 
 Option cards (fixed text). Steps below were checked against the official Groww Help pages on 1 Nov 2026. Use them exactly. Do not add steps.
 - Skip this month: "Skip one instalment. Groww says that once an instalment is skipped, your investments continue as is. Your units stay invested."

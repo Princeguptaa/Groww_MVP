@@ -73,12 +73,33 @@ REASON_BLOCKS = {
 }
 
 # ---------------------------------------------------------------------------
+# Context strip and Screen captions (spec §4.1)
+# ---------------------------------------------------------------------------
+CONTEXT_STRIP = "Groww > My SIPs > Example SIP"
+CONTEXT_CAPTION = "Prototype of a feature inside Groww. It is not connected to any account."
+SCREEN_A_CAPTION = (
+    "Your message is sent to an AI service (Google Gemini) to work out the reason. "
+    "This tool does not store it. Please do not enter personal or account details."
+)
+
+# ---------------------------------------------------------------------------
+# Tile summary lines — Screen B (spec §7)
+# ---------------------------------------------------------------------------
+TILE_SUMMARIES = {
+    "skip": "Skip one instalment. Your SIP stays active.",
+    "reduce": "Lower the amount for a while. Your SIP stays active.",
+    "break": "Skip as each month comes, or stop and start again later.",
+    "stop": "Stop future instalments. Your units stay.",
+}
+
+# ---------------------------------------------------------------------------
 # Option cards — fixed order, always all four (spec §7)
 # ---------------------------------------------------------------------------
 OPTION_CARDS = [
     {
         "key": "skip",
         "title": "Skip this month",
+        "summary": "Skip one instalment. Your SIP stays active.",
         "what": (
             "Skip one instalment. Groww says that once an instalment is skipped, "
             "your investments continue as is. Your units stay invested."
@@ -94,6 +115,7 @@ OPTION_CARDS = [
     {
         "key": "reduce",
         "title": "Reduce the amount for a while",
+        "summary": "Lower the amount for a while. Your SIP stays active.",
         "what": (
             "Lower the monthly amount, then raise it again if you wish. "
             "Your SIP stays active."
@@ -109,6 +131,7 @@ OPTION_CARDS = [
     {
         "key": "break",
         "title": "Take a longer break",
+        "summary": "Skip as each month comes, or stop and start again later.",
         "what": (
             "Groww lets you skip an instalment when you wish. For a longer break "
             "you can skip as each month comes, or stop the SIP and start a new one later."
@@ -121,6 +144,7 @@ OPTION_CARDS = [
     {
         "key": "stop",
         "title": "Stop the SIP",
+        "summary": "Stop future instalments. Your units stay.",
         "what": (
             "Stop future instalments. Units you already hold stay in your "
             "account. You can start a new SIP any time."
@@ -152,9 +176,11 @@ CHIP_REASONS = {
     "Money is tight this month": "CASH",
     "My value is below what I invested": "RETURNS",
     "I don\u2019t understand where my money or instalment is": "CONFUSION",
+    "I don't understand where my money or instalment is": "CONFUSION",
     "I want to use this money elsewhere": "SWITCH",
     "An instalment failed or looks wrong": "PAYMENT",
     "I\u2019m just not sure": "UNCLEAR",
+    "I'm just not sure": "UNCLEAR",
 }
 
 # ---------------------------------------------------------------------------

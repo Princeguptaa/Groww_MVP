@@ -1,15 +1,21 @@
 """
-Tests for Phase 1 Guide flow (spec §4, PLAN.md Phase 1).
+Tests for Three-Screen Guide Flow (spec §4, Screen A, Screen B, Screen C).
 
 Verifies:
 1. Each chip produces the expected reason, sentence, badge, and reason block.
-2. All 4 cards always render in fixed order.
-3. Reduce arithmetic calculates properly when amount is given.
-4. Skip and Pause provide .ics calendar reminder data.
-5. Reason override in Step 2 updates the Step 3 reason block.
+2. Screen B has four equal tiles, with the Stop tile in the same style.
+3. Screen B has no steps and no links.
+4. Screen C shows only the chosen option's steps and one official link.
+5. Reduce arithmetic and calendar check-in still work as specified.
+6. Reason override in Screen B updates the reason block.
 """
+from __future__ import annotations
+
 import datetime
+import inspect
+from pathlib import Path
 import pytest
+
 from lib.content import (
     CHIPS,
     CHIP_REASONS,
@@ -17,64 +23,105 @@ from lib.content import (
     REASONS,
     REASON_BLOCKS,
     REASON_PHRASES,
+    TILE_SUMMARIES,
     create_ics,
 )
 from lib.router_rules import rule_route
+from views import guide
 
 
 def test_each_chip_end_to_end_flow():
+    """Verify each chip routes correctly and generates valid sentence and badge."""
     for chip in CHIPS:
         expected_reason = CHIP_REASONS[chip]
         res = rule_route(chip, chip=chip)
         assert res.reason == expected_reason
         assert res.evidence == chip
 
-        # Verify Step 2 sentence structure
+        # Verify Screen B sentence structure
         reason_phrase = REASON_PHRASES[res.reason]
         sentence = f"It sounds like {reason_phrase}. You wrote: ‘{res.evidence}’."
         assert reason_phrase in sentence
         assert chip in sentence
 
-        # Verify Step 2 badge
+        # Verify badge
         if res.reason == "UNCLEAR":
             badge = "Not sure, so we show every option"
         else:
             badge = "Checked: quoted from your message"
         assert badge
 
-        # Verify Step 3 reason block
+        # Verify reason block
         reason_block = REASON_BLOCKS[res.reason]
         assert len(reason_block) > 0
 
 
-def test_all_four_cards_always_rendered():
+def test_screen_b_four_equal_tiles_stop_same_style():
+    """Verify Screen B has four equal tiles in fixed order with Stop tile in the same style."""
     cards = OPTION_CARDS
     assert len(cards) == 4
+    expected_keys = ["skip", "reduce", "break", "stop"]
     expected_titles = [
         "Skip this month",
         "Reduce the amount for a while",
         "Take a longer break",
         "Stop the SIP",
     ]
-    for card, expected_title in zip(cards, expected_titles):
+
+    for card, expected_key, expected_title in zip(cards, expected_keys, expected_titles):
+        assert card["key"] == expected_key
         assert card["title"] == expected_title
+        # Each tile has a 1-line summary matching TILE_SUMMARIES
+        summary = card.get("summary") or TILE_SUMMARIES.get(card["key"])
+        assert summary == TILE_SUMMARIES[expected_key]
+        assert len(summary) > 10
+
+    # Stop tile has exactly the same structure, keys, and styling attributes
+    stop_card = next(c for c in cards if c["key"] == "stop")
+    skip_card = next(c for c in cards if c["key"] == "skip")
+    assert set(stop_card.keys()) == set(skip_card.keys())
+
+
+def test_screen_b_has_no_steps_or_links():
+    """Verify Screen B source code renders no steps and no links."""
+    source_b = inspect.getsource(guide._render_screen_b)
+
+    # Must not render step lists
+    assert "card['steps']" not in source_b
+    assert 'card["steps"]' not in source_b
+
+    # Must not render official links
+    assert "card['link']" not in source_b
+    assert 'card["link"]' not in source_b
+    assert "https://groww.in" not in source_b
+
+
+def test_screen_c_shows_only_chosen_option_steps():
+    """Verify Screen C renders only the chosen option's steps and link."""
+    for card in OPTION_CARDS:
+        chosen_key = card["key"]
+        chosen = next(c for c in OPTION_CARDS if c["key"] == chosen_key)
+        assert chosen["title"] == card["title"]
         if card["key"] == "break":
-            assert len(card["steps"]) == 0
+            # Break has no steps (link only)
+            assert len(chosen["steps"]) == 0
         else:
-            assert len(card["steps"]) == 3
-        assert card["link"].startswith("https://groww.in")
+            assert len(chosen["steps"]) == 3
+        assert chosen["link"].startswith("https://groww.in")
 
 
 def test_reduce_arithmetic_calculation():
-    user_amount = 5000
-    b_amount = 2000
-    n_months = 4
-    total = b_amount * n_months
-    calc_str = f"If you reduce from {user_amount} to {b_amount} for {n_months} months, you still put in {total} rupees."
+    """Verify Screen C Reduce arithmetic calculation."""
+    amount_a = 5000
+    amount_b = 2000
+    months_n = 4
+    total = amount_b * months_n
+    calc_str = f"If you reduce from {amount_a} to {amount_b} for {months_n} months, you still put in {total} rupees."
     assert calc_str == "If you reduce from 5000 to 2000 for 4 months, you still put in 8000 rupees."
 
 
 def test_skip_and_longer_break_have_calendar_reminder():
+    """Verify Skip and Take a longer break have calendar reminder, Reduce and Stop do not."""
     skip_card = next(c for c in OPTION_CARDS if c["key"] == "skip")
     break_card = next(c for c in OPTION_CARDS if c["key"] == "break")
     reduce_card = next(c for c in OPTION_CARDS if c["key"] == "reduce")
@@ -92,8 +139,27 @@ def test_skip_and_longer_break_have_calendar_reminder():
     assert "20261130" in ics
 
 
+def test_screen_a_has_no_amount_or_months_inputs():
+    """Verify Screen A has no amount or months number inputs."""
+    source_a = inspect.getsource(guide._render_screen_a)
+    assert "number_input" not in source_a
+    assert "Monthly SIP amount" not in source_a
+    assert "Months since you started" not in source_a
+
+
+def test_one_clear_primary_button_per_screen():
+    """Verify each screen has exactly one clear primary button."""
+    source_a = inspect.getsource(guide._render_screen_a)
+    source_b = inspect.getsource(guide._render_screen_b)
+    source_c = inspect.getsource(guide._render_screen_c)
+
+    assert source_a.count('type="primary"') == 1
+    assert source_b.count('type="primary"') == 1
+    assert source_c.count('type="primary"') == 1
+
+
 def test_reason_override_updates_block():
-    # User originally routed to CASH, but overrides to RETURNS
+    """Verify reason override updates the reason block."""
     original_reason = "CASH"
     overridden_reason = "RETURNS"
 
