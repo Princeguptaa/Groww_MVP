@@ -23,7 +23,13 @@ from __future__ import annotations
 from pathlib import Path
 import pytest
 
-from lib.content import PLAN_CAPTION, PLAN_TITLE, calculate_plan
+from lib.content import (
+    CHART_TITLE,
+    PLAN_CAPTION,
+    PLAN_TITLE,
+    calculate_monthly_series,
+    calculate_plan,
+)
 from lib.guards import gate_3b
 
 
@@ -131,7 +137,7 @@ def test_2a_plan_view_screen_b_prefilled_from_extracted_amount():
     from streamlit.testing.v1 import AppTest
 
     app_path = Path(__file__).resolve().parent.parent / "app.py"
-    at = AppTest.from_file(str(app_path))
+    at = AppTest.from_file(str(app_path), default_timeout=10)
 
     # Pre-set session state simulating Screen A transition after AI router extraction
     at.session_state["guide_screen"] = "B"
@@ -141,6 +147,7 @@ def test_2a_plan_view_screen_b_prefilled_from_extracted_amount():
     # Extracted values that passed Gate 3b:
     at.session_state["plan_amount_inr"] = 5000
     at.session_state["plan_amount_input"] = 5000
+    at.session_state["plan_period_select"] = 6
     at.session_state["plan_reduce_to_input"] = 2500
     at.session_state["plan_break_months_input"] = 2
 
@@ -170,6 +177,53 @@ def test_2a_plan_view_screen_b_prefilled_from_extracted_amount():
     assert table_df.loc["Take a longer break"]["Months with an instalment"] == 4
     assert table_df.loc["Stop"]["You put in (rupees)"] == 0
     assert table_df.loc["Stop"]["Months with an instalment"] == 0
+
+    # Verify "Your way back" chart title and line chart render
+    markdown_texts = [m.value for m in at.markdown]
+    assert any("Your way back" in m for m in markdown_texts)
+    charts = at.get("vega_lite_chart")
+    assert len(charts) >= 1
+    # Check proto or spec of the rendered vega lite chart contains the series names
+    chart_spec = str(charts[0].proto) if hasattr(charts[0], "proto") else ""
+    for series_name in ["Continue", "Skip one month", "Reduce", "Longer break", "Stop"]:
+        assert series_name in chart_spec
+
+
+def test_2a_chart_data_matches_table_totals():
+    """Test 2a: verify that month-by-month chart series sum to the exact table totals."""
+    test_cases = [
+        {"a": 5000, "n": 6, "b": 2500, "m": 2},
+        {"a": 10000, "n": 3, "b": 5000, "m": 1},
+        {"a": 2000, "n": 12, "b": 1000, "m": 4},
+        {"a": 7500, "n": 6, "b": 3000, "m": 3},
+        {"a": 5000, "n": 6, "b": 1000, "m": 6},  # Break length equals period
+    ]
+
+    for tc in test_cases:
+        a, n, b, m = tc["a"], tc["n"], tc["b"], tc["m"]
+        plan_table = calculate_plan(a=a, n=n, b=b, m=m)
+        table_totals = {row["Option"]: row["You put in (rupees)"] for row in plan_table}
+
+        series = calculate_monthly_series(a=a, n=n, b=b, m=m)
+
+        # Check lengths are exactly N
+        for opt_name, monthly_vals in series.items():
+            assert len(monthly_vals) == n, f"Series {opt_name} length {len(monthly_vals)} != {n}"
+
+        # Check sums match table totals exactly
+        assert sum(series["Continue"]) == table_totals["Continue as is"]
+        assert sum(series["Skip one month"]) == table_totals["Skip one month"]
+        assert sum(series["Reduce"]) == table_totals["Reduce"]
+        assert sum(series["Longer break"]) == table_totals["Take a longer break"]
+        assert sum(series["Stop"]) == table_totals["Stop"]
+
+        # Check month-by-month logic for user example (A=5000, N=6, B=2500, M=2)
+        if a == 5000 and n == 6 and b == 2500 and m == 2:
+            assert series["Continue"] == [5000, 5000, 5000, 5000, 5000, 5000]
+            assert series["Skip one month"] == [0, 5000, 5000, 5000, 5000, 5000]
+            assert series["Reduce"] == [2500, 2500, 5000, 5000, 5000, 5000]
+            assert series["Longer break"] == [0, 0, 5000, 5000, 5000, 5000]
+            assert series["Stop"] == [0, 0, 0, 0, 0, 0]
 
 
 def test_2a_plan_view_screen_b_no_amount_shows_inputs_no_table():

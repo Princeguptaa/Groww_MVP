@@ -21,12 +21,14 @@ from lib.content import (
     OPTION_CARDS,
     PLAN_CAPTION,
     PLAN_TITLE,
+    CHART_TITLE,
     REASONS,
     REASON_BLOCKS,
     REASON_LABELS,
     REASON_PHRASES,
     SCREEN_A_CAPTION,
     TILE_SUMMARIES,
+    calculate_monthly_series,
     calculate_plan,
     create_ics,
 )
@@ -279,12 +281,9 @@ def _render_plan_section() -> None:
         period_options = [3, 6, 12]
         if "plan_period_select" not in st.session_state:
             st.session_state["plan_period_select"] = 6
-        current_p = int(st.session_state.get("plan_period_select", 6))
-        p_idx = period_options.index(current_p) if current_p in period_options else 1
         period = st.selectbox(
             "Period (months)",
             options=period_options,
-            index=p_idx,
             key="plan_period_select",
         )
 
@@ -330,14 +329,17 @@ def _render_plan_section() -> None:
     # Table comparing the 5 options
     st.table(df)
 
-    # Bar chart comparing You put in (rupees) for each option
-    chart_df = pd.DataFrame(
-        {
-            "Option": [row["Option"] for row in plan_data],
-            "You put in (rupees)": [row["You put in (rupees)"] for row in plan_data],
-        }
-    ).set_index("Option")
-    st.bar_chart(chart_df["You put in (rupees)"])
+    # Month-by-month chart: "Your way back" (x = month 1 to N, y = rupees invested that month)
+    st.markdown(f"#### {CHART_TITLE}")
+    monthly_series = calculate_monthly_series(
+        a=user_amount,
+        n=period,
+        b=reduce_to,
+        m=break_months,
+    )
+    chart_df = pd.DataFrame(monthly_series, index=list(range(1, period + 1)))
+    chart_df.index.name = "Month"
+    st.line_chart(chart_df)
 
     # Caption (spec §4.2)
     st.caption(PLAN_CAPTION)

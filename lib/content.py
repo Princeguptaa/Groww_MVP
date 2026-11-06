@@ -84,6 +84,7 @@ SCREEN_A_CAPTION = (
 
 PLAN_TITLE = "What each option means for you"
 PLAN_CAPTION = "Simple arithmetic on your numbers. Not a forecast. Not advice."
+CHART_TITLE = "Your way back"
 
 
 def calculate_plan(a: int, n: int, b: int, m: int) -> list[dict[str, Any]]:
@@ -121,6 +122,25 @@ def calculate_plan(a: int, n: int, b: int, m: int) -> list[dict[str, Any]]:
             "Months with an instalment": 0,
         },
     ]
+
+
+def calculate_monthly_series(a: int, n: int, b: int, m: int) -> dict[str, list[int]]:
+    """
+    Month-by-month investment series per option for months 1 to N:
+    - Continue: A every month for N months
+    - Skip one month: 0 in month 1, then A for months 2 to N
+    - Reduce: B for months 1 to M, then A for months M+1 to N
+    - Longer break: 0 for months 1 to M, then A for months M+1 to N
+    - Stop: 0 for all N months
+    """
+    m_clamped = min(max(1, m), n)
+    return {
+        "Continue": [a] * n,
+        "Skip one month": [0] + [a] * max(0, n - 1),
+        "Reduce": [b] * m_clamped + [a] * max(0, n - m_clamped),
+        "Longer break": [0] * m_clamped + [a] * max(0, n - m_clamped),
+        "Stop": [0] * n,
+    }
 
 # ---------------------------------------------------------------------------
 # Tile summary lines — Screen B (spec §7)
