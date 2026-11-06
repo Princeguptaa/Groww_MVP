@@ -10,7 +10,7 @@ Verifies:
 """
 import pytest
 from lib.content import DECLINE_TEXT
-from lib.guards import post_gates, pre_check
+from lib.guards import gate_3b, post_gates, pre_check
 
 
 def test_gate1_invalid_reason_gives_unclear():
@@ -97,4 +97,35 @@ def test_gate7_confidence_number_never_surfaced():
     reason, evidence = post_gates(data, "money is tight this month")
     assert "confidence" not in data
     assert reason == "CASH"
+
+
+def test_gate3b_extracted_numbers_kept_only_if_in_message():
+    """Gate 3b: amount_inr and months kept only if number appears in message text."""
+    msg = "salary delayed, my SIP is 5000, due in 5 days"
+
+    # 5000 appears in message -> kept
+    amt, mo = gate_3b(5000, None, msg)
+    assert amt == 5000
+    assert mo is None
+
+    # Hallucinated amount (10000) not in message -> set to None
+    amt, mo = gate_3b(10000, None, msg)
+    assert amt is None
+    assert mo is None
+
+    # 5 appears in message ("5 days") -> kept if returned, but 6 not in message -> None
+    amt, mo = gate_3b(5000, 6, msg)
+    assert amt == 5000
+    assert mo is None
+
+    # Shorthand 5k
+    amt, mo = gate_3b(5000, 3, "my sip is 5k and need a break for 3 months")
+    assert amt == 5000
+    assert mo == 3
+
+    # In post_gates dictionary update
+    data = {"reason": "CASH", "evidence": "salary delayed", "amount_inr": 5000, "months": 12}
+    post_gates(data, msg)
+    assert data["amount_inr"] == 5000
+    assert data["months"] is None  # 12 is not in msg
 

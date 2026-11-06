@@ -9,6 +9,7 @@ Screen C: One option in detail (tapped option only, steps, link, arithmetic / ca
 from __future__ import annotations
 
 import datetime
+import pandas as pd
 import streamlit as st
 
 from lib.content import (
@@ -18,12 +19,15 @@ from lib.content import (
     DECLINE_TEXT,
     GROWW_HELP_LINK,
     OPTION_CARDS,
+    PLAN_CAPTION,
+    PLAN_TITLE,
     REASONS,
     REASON_BLOCKS,
     REASON_LABELS,
     REASON_PHRASES,
     SCREEN_A_CAPTION,
     TILE_SUMMARIES,
+    calculate_plan,
     create_ics,
 )
 from lib.guards import pre_check
@@ -132,6 +136,16 @@ def _render_screen_a() -> None:
                 st.session_state["detected_reason"] = ai_out.reason
                 st.session_state["detected_evidence"] = ai_out.evidence
                 st.session_state["ai_banner"] = ai_out.banner
+                # Prefill amount and months from extracted values only when gate 3b passes
+                if ai_out.amount_inr is not None:
+                    st.session_state["plan_amount_inr"] = ai_out.amount_inr
+                    st.session_state["plan_amount_input"] = ai_out.amount_inr
+                    st.session_state["reduce_amt_a"] = ai_out.amount_inr
+                    st.session_state["plan_reduce_to_input"] = max(1, ai_out.amount_inr // 2)
+                if ai_out.months is not None:
+                    st.session_state["plan_break_months"] = ai_out.months
+                    st.session_state["plan_break_months_input"] = ai_out.months
+                    st.session_state["reduce_months_n"] = ai_out.months
             else:
                 res = rule_route(trimmed, chip=st.session_state.get("selected_chip"))
                 st.session_state["detected_reason"] = res.reason
@@ -199,6 +213,9 @@ def _render_screen_b() -> None:
     # Reason block first (spec §4.2, §7)
     st.info(REASON_BLOCKS[active_reason])
 
+    # "What each option means for you" plan view (above the tiles, spec §4.2)
+    _render_plan_section()
+
     # Heading (spec §4.2)
     st.subheader("Your options. Tap one to see how.")
 
@@ -242,6 +259,88 @@ def _render_screen_b() -> None:
     if st.button("Start over", key="screen_b_start_over"):
         _reset_state()
         st.rerun()
+
+
+def _render_plan_section() -> None:
+    """Render 'What each option means for you' plan view per spec §4.2."""
+    st.subheader(PLAN_TITLE)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if "plan_amount_input" not in st.session_state:
+            st.session_state["plan_amount_input"] = int(st.session_state.get("plan_amount_inr", 0))
+        user_amount = st.number_input(
+            "Monthly SIP amount (₹)",
+            min_value=0,
+            step=500,
+            key="plan_amount_input",
+        )
+    with col2:
+        period_options = [3, 6, 12]
+        if "plan_period_select" not in st.session_state:
+            st.session_state["plan_period_select"] = 6
+        current_p = int(st.session_state.get("plan_period_select", 6))
+        p_idx = period_options.index(current_p) if current_p in period_options else 1
+        period = st.selectbox(
+            "Period (months)",
+            options=period_options,
+            index=p_idx,
+            key="plan_period_select",
+        )
+
+    col3, col4 = st.columns(2)
+    with col3:
+        if "plan_reduce_to_input" not in st.session_state:
+            init_reduce = max(1, user_amount // 2) if user_amount > 0 else 0
+            st.session_state["plan_reduce_to_input"] = init_reduce
+        elif user_amount > 0 and st.session_state.get("plan_reduce_to_input", 0) == 0:
+            st.session_state["plan_reduce_to_input"] = max(1, user_amount // 2)
+
+        reduce_to = st.number_input(
+            "Reduce to (₹/month)",
+            min_value=0,
+            step=500,
+            key="plan_reduce_to_input",
+        )
+    with col4:
+        if "plan_break_months_input" not in st.session_state:
+            init_break = min(period, int(st.session_state.get("plan_break_months", 2)))
+            st.session_state["plan_break_months_input"] = init_break
+        break_months = st.number_input(
+            "Break length in months",
+            min_value=1,
+            max_value=period,
+            step=1,
+            key="plan_break_months_input",
+        )
+
+    # Spec §4.2: If no amount is available, show the inputs and no table until one is entered.
+    if user_amount <= 0:
+        return
+
+    # Calculate plan table
+    plan_data = calculate_plan(
+        a=user_amount,
+        n=period,
+        b=reduce_to,
+        m=break_months,
+    )
+    df = pd.DataFrame(plan_data).set_index("Option")
+
+    # Table comparing the 5 options
+    st.table(df)
+
+    # Bar chart comparing You put in (rupees) for each option
+    chart_df = pd.DataFrame(
+        {
+            "Option": [row["Option"] for row in plan_data],
+            "You put in (rupees)": [row["You put in (rupees)"] for row in plan_data],
+        }
+    ).set_index("Option")
+    st.bar_chart(chart_df["You put in (rupees)"])
+
+    # Caption (spec §4.2)
+    st.caption(PLAN_CAPTION)
 
 
 # ---------------------------------------------------------------------------
@@ -367,6 +466,13 @@ def _reset_state() -> None:
         "reduce_months_n",
         "screen_c_date_input",
         "screen_b_reason_override_radio",
+        "plan_amount_inr",
+        "plan_break_months",
+        "plan_reduce_to",
+        "plan_amount_input",
+        "plan_period_select",
+        "plan_reduce_to_input",
+        "plan_break_months_input",
     ]
     for key in keys_to_clear:
         st.session_state.pop(key, None)

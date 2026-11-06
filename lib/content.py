@@ -82,6 +82,46 @@ SCREEN_A_CAPTION = (
     "This tool does not store it. Please do not enter personal or account details."
 )
 
+PLAN_TITLE = "What each option means for you"
+PLAN_CAPTION = "Simple arithmetic on your numbers. Not a forecast. Not advice."
+
+
+def calculate_plan(a: int, n: int, b: int, m: int) -> list[dict[str, Any]]:
+    """
+    Formulas per spec §4.2:
+    Continue = A x N; Skip one month = A x (N-1); Reduce = B x M + A x (N-M);
+    Longer break = A x (N-M); Stop = 0.
+    Months with an instalment: N, N-1, N, N-M, 0.
+    """
+    m_clamped = min(max(1, m), n)
+    return [
+        {
+            "Option": "Continue as is",
+            "You put in (rupees)": a * n,
+            "Months with an instalment": n,
+        },
+        {
+            "Option": "Skip one month",
+            "You put in (rupees)": a * max(0, n - 1),
+            "Months with an instalment": max(0, n - 1),
+        },
+        {
+            "Option": "Reduce",
+            "You put in (rupees)": b * m_clamped + a * max(0, n - m_clamped),
+            "Months with an instalment": n,
+        },
+        {
+            "Option": "Take a longer break",
+            "You put in (rupees)": a * max(0, n - m_clamped),
+            "Months with an instalment": max(0, n - m_clamped),
+        },
+        {
+            "Option": "Stop",
+            "You put in (rupees)": 0,
+            "Months with an instalment": 0,
+        },
+    ]
+
 # ---------------------------------------------------------------------------
 # Tile summary lines — Screen B (spec §7)
 # ---------------------------------------------------------------------------
